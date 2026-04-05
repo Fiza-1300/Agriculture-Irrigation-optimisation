@@ -5,6 +5,7 @@ Person A Deliverable | RL Irrigation Optimization Project
 Defines how the farm world behaves when an action is taken.
 """
 
+from matplotlib.pylab import seed
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
@@ -115,7 +116,8 @@ class IrrigationEnv(gym.Env):
     # ─────────────────────────────────────────────────────────────────────
     # RESET
     # ─────────────────────────────────────────────────────────────────────
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
         """
         Initialise (or reinitialise) environment to a fresh episode start.
 
@@ -136,7 +138,7 @@ class IrrigationEnv(gym.Env):
         self.rain          = 0.0   # no rain at episode start
         self.crop_stage    = 0.0   # seedling at episode start
 
-        return self.get_state()
+        return self.get_state(), {}
 
     # ─────────────────────────────────────────────────────────────────────
     # STEP
