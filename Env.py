@@ -5,8 +5,9 @@ Person A Deliverable | RL Irrigation Optimization Project
 Defines how the farm world behaves when an action is taken.
 """
 
-from matplotlib.pylab import seed
 import numpy as np
+
+np.random.seed(42)
 import gymnasium as gym
 from gymnasium import spaces
 
@@ -37,6 +38,7 @@ class IrrigationEnv(gym.Env):
     OPTIMAL_HIGH = 0.70
 
     def __init__(self, difficulty: str = "medium"):
+    
         """
         Args:
             difficulty: "easy" | "medium" | "hard"

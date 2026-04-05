@@ -1,15 +1,22 @@
-# Agricultural Irrigation Optimization (RL)
+---
+title: Irrigation AI
+emoji: 🌱
+colorFrom: green
+colorTo: blue
+sdk: docker
+app_file: inference.py
+pinned: false
+---
 
-This project uses Reinforcement Learning to optimize irrigation decisions.
+# Irrigation AI 🌱
 
-## Features
-- Custom environment (env.py)
-- PPO trained agent
-- Dynamic weather simulation
-- Water-efficient irrigation
+This project implements a Reinforcement Learning-based irrigation system.
 
-## Files
-- env.py
-- train.py
-- model.zip
-- test_model.py
+It uses PPO from Stable-Baselines3 to optimize water usage based on:
+- Soil moisture
+- Temperature
+- Humidity
+- Rain
+- Crop stage
+
+The goal is to maintain optimal moisture while minimizing water waste.
