@@ -1,4 +1,4 @@
-from Env import IrrigationEnv
+from env import IrrigationEnv
 from stable_baselines3 import PPO
 
 def evaluate(difficulty):
