@@ -1,9 +1,9 @@
-FROM python:3.9
+FROM python:3.10
 
 WORKDIR /app
 
 COPY . .
 
-RUN pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cpu
-RUN pip install numpy gymnasium stable-baselines3 matplotlib
+RUN pip install --no-cache-dir -r requirements.txt
+
 CMD ["python", "inference.py"]
