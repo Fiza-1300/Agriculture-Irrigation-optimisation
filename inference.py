@@ -39,11 +39,9 @@ import os
 
 app = FastAPI()
 
-# Get the directory where this file is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_PATH = os.path.join(BASE_DIR, "model.zip")
 
-# Initialize environment and model
 env = IrrigationEnv(difficulty="medium")
 model = PPO.load(MODEL_PATH)
 
@@ -78,10 +76,9 @@ def step():
         "info": info
     }
 
+# THIS IS THE CRITICAL PART - MAIN FUNCTION
 def main():
-    """Entry point for the API"""
     uvicorn.run(app, host="0.0.0.0", port=7860)
 
 if __name__ == "__main__":
     main()
-
