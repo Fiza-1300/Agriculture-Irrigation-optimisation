@@ -1,246 +1,263 @@
-# openenv.yaml
-# Agricultural Irrigation Optimization — Environment Specification
-# Person A Deliverable | RL Irrigation Optimization Project
+# # openenv.yaml
+# # Agricultural Irrigation Optimization — Environment Specification
+# # Person A Deliverable | RL Irrigation Optimization Project
 
-name: IrrigationEnv
+# name: IrrigationEnv
+# version: "1.0.0"
+# description: >
+#   A farm simulation environment where an RL agent learns to control
+#   irrigation intelligently. The agent observes soil moisture, weather,
+#   and crop growth stage, then decides how much water to apply.
+#   Goal: keep soil moisture in the optimal range while minimising water waste.
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # OBSERVATION SPACE
+# # All values are normalised to [0.0, 1.0] (float32)
+# # ─────────────────────────────────────────────────────────────────────────────
+# observation_space:
+#   type: Box
+#   dtype: float32
+#   shape: [5]
+#   low: [0.0, 0.0, 0.0, 0.0, 0.0]
+#   high: [1.0, 1.0, 1.0, 1.0, 1.0]
+
+#   fields:
+#     - index: 0
+#       name: soil_moisture
+#       description: Current soil moisture level
+#       unit: "fraction (0 = bone dry, 1 = fully saturated)"
+#       optimal_range: [0.40, 0.70]
+
+#     - index: 1
+#       name: temperature
+#       description: Ambient air temperature scaled from raw °C (0–50°C → 0–1)
+#       unit: "normalised (0 = 0°C, 1 = 50°C)"
+
+#     - index: 2
+#       name: humidity
+#       description: Relative air humidity
+#       unit: "fraction (0 = 0%, 1 = 100%)"
+
+#     - index: 3
+#       name: rain
+#       description: Current rainfall intensity (0 if no rain)
+#       unit: "normalised moisture units per hour"
+
+#     - index: 4
+#       name: crop_stage
+#       description: Growth stage of the crop
+#       unit: "fraction (0 = seedling, 1 = harvest-ready)"
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # ACTION SPACE
+# # ─────────────────────────────────────────────────────────────────────────────
+# action_space:
+#   type: Discrete
+#   n: 3
+
+#   actions:
+#     - id: 0
+#       name: no_irrigation
+#       description: Do not irrigate. No water is added.
+#       water_added: 0.00
+
+#     - id: 1
+#       name: low_irrigation
+#       description: Apply a small amount of water.
+#       water_added: 0.08
+
+#     - id: 2
+#       name: high_irrigation
+#       description: Apply a large amount of water.
+#       water_added: 0.18
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # REWARD STRUCTURE
+# # ─────────────────────────────────────────────────────────────────────────────
+# reward:
+#   range: [-30.0, 15.0]
+
+#   components:
+#     - name: optimal_moisture_efficient
+#       value: +12.0
+#       condition: "soil_moisture in [0.40, 0.70] AND action == 0"
+
+#     - name: optimal_moisture
+#       value: +10.0
+#       condition: "soil_moisture in [0.40, 0.70] AND action in [1, 2]"
+
+#     - name: too_dry_penalty
+#       value: "-(dryness × 30.0 × harvest_multiplier)"
+#       condition: "soil_moisture < 0.40"
+#       note: "harvest_multiplier = 1.0 + crop_stage × 0.5"
+
+#     - name: too_wet_penalty
+#       value: "-(wetness × 25.0)"
+#       condition: "soil_moisture > 0.70"
+
+#     - name: critical_dry
+#       value: -15.0
+#       condition: "soil_moisture < 0.15"
+
+#     - name: critical_wet
+#       value: -12.0
+#       condition: "soil_moisture > 0.92"
+
+#     - name: rain_waste_penalty
+#       value: "-(rain × water_added × 40.0)"
+#       condition: "irrigated == True AND rain > 0.05"
+
+#     - name: over_watering_penalty
+#       value: "-(water_added × 20.0)"
+#       condition: "irrigated == True AND prev_moisture > 0.70"
+
+#     - name: unnecessary_irrigation
+#       value: "-(water_added × 8.0)"
+#       condition: "irrigated == True AND prev_moisture in [0.40, 0.70]"
+
+#     - name: high_water_excess
+#       value: -2.0
+#       condition: "action == 2 AND prev_moisture > 0.30"
+
+#     - name: drought_correct_response
+#       value: +5.0
+#       condition: "in_drought == True AND irrigated == True AND moisture < 0.40"
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # EPISODE
+# # ─────────────────────────────────────────────────────────────────────────────
+# episode:
+#   max_steps: 168
+#   timestep_unit: "1 hour"
+#   total_duration: "7 days (1 week)"
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # DIFFICULTY LEVELS (TASKS)
+# # ─────────────────────────────────────────────────────────────────────────────
+# tasks:
+#   - id: easy
+#     name: "Easy — Stable Farm"
+#     description: >
+#       Predictable environment with low variability.
+#       Ideal for initial learning and baseline testing.
+#     parameters:
+#       rain_probability: 0.05
+#       evaporation_rate: 0.01
+#       temp_range_celsius: [20, 30]
+#       humidity_range_percent: [40, 60]
+#       sensor_noise_std: 0.00
+#       drought_event_prob: 0.00
+#       rain_intensity_range: [0.05, 0.10]
+
+#   - id: medium
+#     name: "Medium — Realistic Farm"
+#     description: >
+#       Moderate randomness in weather and rain. Sensor noise introduced.
+#       This is the PRIMARY training and evaluation task.
+#     parameters:
+#       rain_probability: 0.15
+#       evaporation_rate: 0.02
+#       temp_range_celsius: [25, 40]
+#       humidity_range_percent: [30, 70]
+#       sensor_noise_std: 0.01
+#       drought_event_prob: 0.05
+#       rain_intensity_range: [0.05, 0.20]
+
+#   - id: hard
+#     name: "Hard — Extreme Conditions"
+#     description: >
+#       High heat, frequent drought spells, noisy sensors, unpredictable rain.
+#       Tests agent robustness and generalisation.
+#     parameters:
+#       rain_probability: 0.25
+#       evaporation_rate: 0.04
+#       temp_range_celsius: [35, 45]
+#       humidity_range_percent: [10, 90]
+#       sensor_noise_std: 0.03
+#       drought_event_prob: 0.15
+#       rain_intensity_range: [0.02, 0.30]
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # ENVIRONMENT DYNAMICS
+# # ─────────────────────────────────────────────────────────────────────────────
+# dynamics:
+#   soil_moisture_update: >
+#     new_moisture = prev_moisture
+#                  + water_added
+#                  + rain
+#                  - evaporation_rate × (0.5 + temperature)
+#                  - 0.005 × (0.5 + crop_stage)
+#     clipped to [0.0, 1.0]
+
+#   crop_stage_update: >
+#     crop_stage += 1.0 / max_steps  (linear growth over episode)
+#     clipped to [0.0, 1.0]
+
+#   rain_model: >
+#     Each step: sample Bernoulli(rain_probability).
+#     If True: intensity ~ Uniform(rain_intensity_range).
+#     Drought events suppress rain for multiple consecutive steps.
+
+#   weather_drift: >
+#     Temperature and humidity undergo small random walks each step
+#     to simulate realistic hourly fluctuation.
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # INTERFACE CONTRACT (for Person B and Person C)
+# # ─────────────────────────────────────────────────────────────────────────────
+# interface:
+#   class: IrrigationEnv
+#   module: env
+
+#   constructor:
+#     args:
+#       difficulty:
+#         type: str
+#         options: ["easy", "medium", "hard"]
+#         default: "medium"
+
+#   methods:
+#     reset:
+#       returns: "np.ndarray shape (5,) float32"
+#       description: "Resets episode. Call before every new episode."
+
+#     step:
+#       args:
+#         action:
+#           type: int
+#           range: [0, 2]
+#       returns:
+#         - "state  : np.ndarray shape (5,) float32"
+#         - "reward : float"
+#         - "done   : bool"
+#         - "info   : dict"
+
+#     get_state:
+#       returns: "np.ndarray shape (5,) float32"
+#       description: "Returns current observation (with sensor noise applied)."
+
+# # ─────────────────────────────────────────────────────────────────────────────
+# # DEPENDENCIES
+# # ─────────────────────────────────────────────────────────────────────────────
+# dependencies:
+#   python: ">=3.8"
+#   packages:
+#     - gym>=0.21.0
+#     - numpy>=1.21.0
+
+name: irrigation-ai
 version: "1.0.0"
-description: >
-  A farm simulation environment where an RL agent learns to control
-  irrigation intelligently. The agent observes soil moisture, weather,
-  and crop growth stage, then decides how much water to apply.
-  Goal: keep soil moisture in the optimal range while minimising water waste.
-
-# ─────────────────────────────────────────────────────────────────────────────
-# OBSERVATION SPACE
-# All values are normalised to [0.0, 1.0] (float32)
-# ─────────────────────────────────────────────────────────────────────────────
-observation_space:
-  type: Box
-  dtype: float32
-  shape: [5]
-  low: [0.0, 0.0, 0.0, 0.0, 0.0]
-  high: [1.0, 1.0, 1.0, 1.0, 1.0]
-
-  fields:
-    - index: 0
-      name: soil_moisture
-      description: Current soil moisture level
-      unit: "fraction (0 = bone dry, 1 = fully saturated)"
-      optimal_range: [0.40, 0.70]
-
-    - index: 1
-      name: temperature
-      description: Ambient air temperature scaled from raw °C (0–50°C → 0–1)
-      unit: "normalised (0 = 0°C, 1 = 50°C)"
-
-    - index: 2
-      name: humidity
-      description: Relative air humidity
-      unit: "fraction (0 = 0%, 1 = 100%)"
-
-    - index: 3
-      name: rain
-      description: Current rainfall intensity (0 if no rain)
-      unit: "normalised moisture units per hour"
-
-    - index: 4
-      name: crop_stage
-      description: Growth stage of the crop
-      unit: "fraction (0 = seedling, 1 = harvest-ready)"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ACTION SPACE
-# ─────────────────────────────────────────────────────────────────────────────
-action_space:
-  type: Discrete
-  n: 3
-
-  actions:
-    - id: 0
-      name: no_irrigation
-      description: Do not irrigate. No water is added.
-      water_added: 0.00
-
-    - id: 1
-      name: low_irrigation
-      description: Apply a small amount of water.
-      water_added: 0.08
-
-    - id: 2
-      name: high_irrigation
-      description: Apply a large amount of water.
-      water_added: 0.18
-
-# ─────────────────────────────────────────────────────────────────────────────
-# REWARD STRUCTURE
-# ─────────────────────────────────────────────────────────────────────────────
-reward:
-  range: [-30.0, 15.0]
-
-  components:
-    - name: optimal_moisture_efficient
-      value: +12.0
-      condition: "soil_moisture in [0.40, 0.70] AND action == 0"
-
-    - name: optimal_moisture
-      value: +10.0
-      condition: "soil_moisture in [0.40, 0.70] AND action in [1, 2]"
-
-    - name: too_dry_penalty
-      value: "-(dryness × 30.0 × harvest_multiplier)"
-      condition: "soil_moisture < 0.40"
-      note: "harvest_multiplier = 1.0 + crop_stage × 0.5"
-
-    - name: too_wet_penalty
-      value: "-(wetness × 25.0)"
-      condition: "soil_moisture > 0.70"
-
-    - name: critical_dry
-      value: -15.0
-      condition: "soil_moisture < 0.15"
-
-    - name: critical_wet
-      value: -12.0
-      condition: "soil_moisture > 0.92"
-
-    - name: rain_waste_penalty
-      value: "-(rain × water_added × 40.0)"
-      condition: "irrigated == True AND rain > 0.05"
-
-    - name: over_watering_penalty
-      value: "-(water_added × 20.0)"
-      condition: "irrigated == True AND prev_moisture > 0.70"
-
-    - name: unnecessary_irrigation
-      value: "-(water_added × 8.0)"
-      condition: "irrigated == True AND prev_moisture in [0.40, 0.70]"
-
-    - name: high_water_excess
-      value: -2.0
-      condition: "action == 2 AND prev_moisture > 0.30"
-
-    - name: drought_correct_response
-      value: +5.0
-      condition: "in_drought == True AND irrigated == True AND moisture < 0.40"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# EPISODE
-# ─────────────────────────────────────────────────────────────────────────────
-episode:
-  max_steps: 168
-  timestep_unit: "1 hour"
-  total_duration: "7 days (1 week)"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# DIFFICULTY LEVELS (TASKS)
-# ─────────────────────────────────────────────────────────────────────────────
-tasks:
-  - id: easy
-    name: "Easy — Stable Farm"
-    description: >
-      Predictable environment with low variability.
-      Ideal for initial learning and baseline testing.
-    parameters:
-      rain_probability: 0.05
-      evaporation_rate: 0.01
-      temp_range_celsius: [20, 30]
-      humidity_range_percent: [40, 60]
-      sensor_noise_std: 0.00
-      drought_event_prob: 0.00
-      rain_intensity_range: [0.05, 0.10]
-
-  - id: medium
-    name: "Medium — Realistic Farm"
-    description: >
-      Moderate randomness in weather and rain. Sensor noise introduced.
-      This is the PRIMARY training and evaluation task.
-    parameters:
-      rain_probability: 0.15
-      evaporation_rate: 0.02
-      temp_range_celsius: [25, 40]
-      humidity_range_percent: [30, 70]
-      sensor_noise_std: 0.01
-      drought_event_prob: 0.05
-      rain_intensity_range: [0.05, 0.20]
-
-  - id: hard
-    name: "Hard — Extreme Conditions"
-    description: >
-      High heat, frequent drought spells, noisy sensors, unpredictable rain.
-      Tests agent robustness and generalisation.
-    parameters:
-      rain_probability: 0.25
-      evaporation_rate: 0.04
-      temp_range_celsius: [35, 45]
-      humidity_range_percent: [10, 90]
-      sensor_noise_std: 0.03
-      drought_event_prob: 0.15
-      rain_intensity_range: [0.02, 0.30]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# ENVIRONMENT DYNAMICS
-# ─────────────────────────────────────────────────────────────────────────────
-dynamics:
-  soil_moisture_update: >
-    new_moisture = prev_moisture
-                 + water_added
-                 + rain
-                 - evaporation_rate × (0.5 + temperature)
-                 - 0.005 × (0.5 + crop_stage)
-    clipped to [0.0, 1.0]
-
-  crop_stage_update: >
-    crop_stage += 1.0 / max_steps  (linear growth over episode)
-    clipped to [0.0, 1.0]
-
-  rain_model: >
-    Each step: sample Bernoulli(rain_probability).
-    If True: intensity ~ Uniform(rain_intensity_range).
-    Drought events suppress rain for multiple consecutive steps.
-
-  weather_drift: >
-    Temperature and humidity undergo small random walks each step
-    to simulate realistic hourly fluctuation.
-
-# ─────────────────────────────────────────────────────────────────────────────
-# INTERFACE CONTRACT (for Person B and Person C)
-# ─────────────────────────────────────────────────────────────────────────────
-interface:
-  class: IrrigationEnv
-  module: env
-
-  constructor:
-    args:
-      difficulty:
-        type: str
-        options: ["easy", "medium", "hard"]
-        default: "medium"
-
-  methods:
-    reset:
-      returns: "np.ndarray shape (5,) float32"
-      description: "Resets episode. Call before every new episode."
-
-    step:
-      args:
-        action:
-          type: int
-          range: [0, 2]
-      returns:
-        - "state  : np.ndarray shape (5,) float32"
-        - "reward : float"
-        - "done   : bool"
-        - "info   : dict"
-
-    get_state:
-      returns: "np.ndarray shape (5,) float32"
-      description: "Returns current observation (with sensor noise applied)."
-
-# ─────────────────────────────────────────────────────────────────────────────
-# DEPENDENCIES
-# ─────────────────────────────────────────────────────────────────────────────
-dependencies:
-  python: ">=3.8"
-  packages:
-    - gym>=0.21.0
-    - numpy>=1.21.0
+environment:
+  python: "3.10"
+  dependencies:
+    - pip
+    - pip:
+      - -r requirements.txt
+entrypoints:
+  api:
+    command: uvicorn inference:app --host 0.0.0.0 --port 7860
+    type: service
+    port: 7860
+  reset:
+    command: python -c "from inference import reset_endpoint; reset_endpoint()"
+    type: cli

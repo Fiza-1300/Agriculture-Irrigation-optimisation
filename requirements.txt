@@ -2,7 +2,6 @@ numpy
 gymnasium
 stable-baselines3
 pandas
-stable-baselines3
 torch
 fastapi
 uvicorn
