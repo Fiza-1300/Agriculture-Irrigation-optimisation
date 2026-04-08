@@ -245,19 +245,17 @@
 #     - gym>=0.21.0
 #     - numpy>=1.21.0
 
-name: irrigation-ai
-version: "1.0.0"
+name: agriculture-irrigation
+version: 0.1.0
 environment:
   python: "3.10"
   dependencies:
+    - uv
     - pip
     - pip:
       - -r requirements.txt
 entrypoints:
-  api:
+  server:
     command: uvicorn inference:app --host 0.0.0.0 --port 7860
     type: service
     port: 7860
-  reset:
-    command: python -c "from inference import reset_endpoint; reset_endpoint()"
-    type: cli
