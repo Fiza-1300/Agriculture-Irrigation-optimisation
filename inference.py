@@ -1,117 +1,140 @@
-# from fastapi import FastAPI
-# from env import IrrigationEnv
-# from stable_baselines3 import PPO
-# import uvicorn
-# import os
-# import sys
-# import requests
-# import time
 
-# app = FastAPI()
+"""Baseline inference script for Agricultural Irrigation Environment"""
 
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# MODEL_PATH = os.path.join(BASE_DIR, "model.zip")
+import asyncio
+import os
+import re
+from openai import OpenAI
+from env import IrrigationEnv
 
-# env = None
-# model = None
-# obs = None
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
+API_KEY = os.getenv("OPENAI_API_KEY", "")
 
-# @app.on_event("startup")
-# async def startup_event():
-#     global env, model, obs
+TASK_NAME = "agricultural_irrigation"
+BENCHMARK = "OpenEnv"
+MAX_STEPS = 50
+MAX_TOTAL_REWARD = 100
+SUCCESS_SCORE_THRESHOLD = 0.7
+
+def log_start(task, env, model):
+    print(f'[START] {{"task": "{task}", "env": "{env}", "model": "{model}"}}', flush=True)
+
+def log_step(step, action, reward, done, error):
+    error_str = f'"{error}"' if error else 'null'
+    print(f'[STEP] {{"step": {step}, "action": "{action}", "reward": {reward}, "done": {done}, "error": {error_str}}}', flush=True)
+
+def log_end(success, steps, score, rewards):
+    print(f'[END] {{"success": {success}, "steps": {steps}, "score": {score}, "rewards": {rewards}}}', flush=True)
+
+def get_model_message(client, step, observation, last_reward, history):
+    """Get action from LLM (returns 0, 1, or 2)"""
+    try:
+        # Extract soil moisture from observation (first element of array)
+        if hasattr(observation, '__getitem__'):
+            soil_moisture = observation[0] if len(observation) > 0 else 0.5
+        else:
+            soil_moisture = 0.5
+        
+        prompt = f"""You are controlling an agricultural irrigation system.
+Current step: {step}
+Soil moisture: {soil_moisture:.3f} (optimal range: 0.40-0.70)
+Last reward: {last_reward:.3f}
+
+Choose an action:
+- 0: No irrigation (save water)
+- 1: Low irrigation (gentle watering)  
+- 2: High irrigation (heavy watering)
+
+Strategy:
+- If soil moisture < 0.40: use action 2 (high irrigation)
+- If soil moisture > 0.70: use action 0 (no irrigation)
+- If soil moisture between 0.40-0.70: use action 1 (low irrigation)
+
+Respond with ONLY the number (0, 1, or 2)."""
+        
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=5,
+            temperature=0.7
+        )
+        action_str = response.choices[0].message.content.strip()
+        
+        # Extract first number found
+        numbers = re.findall(r'\d', action_str)
+        if numbers:
+            action = int(numbers[0])
+            if action in [0, 1, 2]:
+                return action
+        
+        # Fallback heuristic based on soil moisture
+        if soil_moisture < 0.40:
+            return 2
+        elif soil_moisture > 0.70:
+            return 0
+        return 1
+        
+    except Exception as e:
+        print(f"[DEBUG] Model request failed: {e}", flush=True)
+        # Fallback heuristic
+        if soil_moisture < 0.40:
+            return 2
+        elif soil_moisture > 0.70:
+            return 0
+        return 1
+
+async def main():
+    """Main inference loop"""
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
     
-#     print("Starting up...")
-#     print(f"Current directory: {os.getcwd()}")
-#     print(f"Files: {os.listdir('.')}")
+    env = IrrigationEnv(difficulty="medium")
+    history = []
+    rewards = []
+    steps_taken = 0
+    score = 0.0
+    success = False
     
-#     env = IrrigationEnv(difficulty="medium")
-#     print("✅ Environment loaded")
+    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
     
-#     print(f"Loading model from {MODEL_PATH}...")
-#     model = PPO.load(MODEL_PATH)
-#     print("✅ Model loaded")
-    
-#     obs, _ = env.reset()
-#     print("✅ Ready!")
-
-# @app.get("/")
-# def root():
-#     return {"message": "Irrigation AI API is running", "status": "healthy"}
-
-# @app.post("/reset")
-# def reset():
-#     global obs
-#     obs, _ = env.reset()
-#     return {"observation": obs.tolist()}
-
-# @app.post("/step")
-# def step():
-#     global obs
-#     action, _ = model.predict(obs)
-#     action = int(action)
-#     obs, reward, done, _, info = env.step(action)
-#     return {
-#         "action": action,
-#         "reward": float(reward),
-#         "done": done,
-#         "observation": obs.tolist()
-#     }
-
-# def main():
-#     uvicorn.run(app, host="0.0.0.0", port=7860)
-
-# if __name__ == "__main__":
-#     main()
-    
-# # Wait for server
-# for i in range(30):
-#     try:
-#         requests.get("http://localhost:7860/")
-#         print("Server ready")
-#         break
-#     except:
-#         print(f"Waiting... {i+1}/30")
-#         time.sleep(2)
-
-# # Test the API
-# requests.post("http://localhost:7860/reset")
-# result = requests.post("http://localhost:7860/step")
-# print(result.json())
-
-
-import requests
-import time
-import sys
-
-def main():
-    # Wait for Docker container to be ready
-    max_retries = 30
-    for i in range(max_retries):
-        try:
-            response = requests.get("http://localhost:7860/", timeout=2)
-            if response.status_code == 200:
-                print("✅ Server is ready")
+    try:
+        # Gymnasium v0.26+: reset() returns (obs, info)
+        obs, info = env.reset()
+        last_reward = 0.0
+        
+        for step in range(1, MAX_STEPS + 1):
+            # Get action from model (0, 1, or 2)
+            action = get_model_message(client, step, obs, last_reward, history)
+            
+            # Gymnasium v0.26+: step() returns (obs, reward, terminated, truncated, info)
+            obs, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+            
+            # Handle reward if it's None
+            reward = reward if reward is not None else 0.0
+            
+            rewards.append(reward)
+            steps_taken = step
+            last_reward = reward
+            
+            log_step(step=step, action=str(action), reward=reward, done=done, error=None)
+            
+            history.append(f"Step {step}: action={action} -> reward {reward:+.3f}")
+            
+            if done:
                 break
-        except:
-            print(f"⏳ Waiting for server... ({i+1}/{max_retries})")
-            time.sleep(2)
-    else:
-        print("❌ Server failed to start")
-        sys.exit(1)
-    
-    # Run a test episode
-    print("🔄 Resetting environment...")
-    reset_response = requests.post("http://localhost:7860/reset")
-    print(f"Reset result: {reset_response.json()}")
-    
-    print("🚀 Taking 5 test steps...")
-    for step in range(5):
-        step_response = requests.post("http://localhost:7860/step")
-        data = step_response.json()
-        print(f"Step {step+1}: reward={data.get('reward', 'N/A')}, done={data.get('done', False)}")
-    
-    print("✅ inference.py completed successfully!")
-    return 0
+        
+        # Calculate final score
+        total_reward = sum(rewards)
+        score = min(total_reward / MAX_TOTAL_REWARD, 1.0) if MAX_TOTAL_REWARD > 0 else 0.0
+        score = max(0.0, score)
+        success = score >= SUCCESS_SCORE_THRESHOLD
+        
+    except Exception as e:
+        print(f"[DEBUG] Error in main: {e}", flush=True)
+        success = False
+    finally:
+        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    asyncio.run(main())
