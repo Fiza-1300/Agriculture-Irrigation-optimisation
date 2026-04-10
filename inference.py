@@ -1,15 +1,27 @@
 
-"""Baseline inference script for Agricultural Irrigation Environment"""
+"""Baseline inference script for Agricultural Irrigation Environment - FIXED FOR EVALUATOR"""
 
 import asyncio
 import os
 import re
+import sys
 from openai import OpenAI
-from env import IrrigationEnv
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-3.5-turbo")
-API_KEY = os.getenv("OPENAI_API_KEY", "")
+# CRITICAL: Use evaluator's environment variables - DO NOT hardcode!
+API_BASE_URL = os.environ.get("API_BASE_URL", "")
+API_KEY = os.environ.get("API_KEY", "")  # Note: It's API_KEY, not OPENAI_API_KEY
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+
+# Validate that we're using the evaluator's proxy
+if not API_BASE_URL or not API_KEY:
+    print("[ERROR] Missing API_BASE_URL or API_KEY environment variables", flush=True)
+    print("[ERROR] This script MUST run with evaluator's proxy", flush=True)
+    sys.exit(1)
+
+print(f"[INFO] Using API_BASE_URL: {API_BASE_URL}", flush=True)
+print(f"[INFO] Using MODEL_NAME: {MODEL_NAME}", flush=True)
+
+from env import IrrigationEnv
 
 TASK_NAME = "agricultural_irrigation"
 BENCHMARK = "OpenEnv"
@@ -18,19 +30,22 @@ MAX_TOTAL_REWARD = 100
 SUCCESS_SCORE_THRESHOLD = 0.7
 
 def log_start(task, env, model):
+    """Emit start log in required format"""
     print(f'[START] {{"task": "{task}", "env": "{env}", "model": "{model}"}}', flush=True)
 
 def log_step(step, action, reward, done, error):
+    """Emit step log in required format"""
     error_str = f'"{error}"' if error else 'null'
     print(f'[STEP] {{"step": {step}, "action": "{action}", "reward": {reward}, "done": {done}, "error": {error_str}}}', flush=True)
 
 def log_end(success, steps, score, rewards):
+    """Emit end log in required format"""
     print(f'[END] {{"success": {success}, "steps": {steps}, "score": {score}, "rewards": {rewards}}}', flush=True)
 
 def get_model_message(client, step, observation, last_reward, history):
-    """Get action from LLM (returns 0, 1, or 2)"""
+    """Get action from evaluator's LLM proxy"""
     try:
-        # Extract soil moisture from observation (first element of array)
+        # Extract soil moisture from observation
         if hasattr(observation, '__getitem__'):
             soil_moisture = observation[0] if len(observation) > 0 else 0.5
         else:
@@ -53,6 +68,7 @@ Strategy:
 
 Respond with ONLY the number (0, 1, or 2)."""
         
+        # CRITICAL: Use the client with evaluator's base_url and api_key
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
@@ -85,8 +101,13 @@ Respond with ONLY the number (0, 1, or 2)."""
         return 1
 
 async def main():
-    """Main inference loop"""
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
+    """Main inference loop - MUST use evaluator's API proxy"""
+    
+    # CRITICAL: Initialize OpenAI client with evaluator's environment variables
+    client = OpenAI(
+        base_url=API_BASE_URL,
+        api_key=API_KEY
+    )
     
     env = IrrigationEnv(difficulty="medium")
     history = []
@@ -103,10 +124,10 @@ async def main():
         last_reward = 0.0
         
         for step in range(1, MAX_STEPS + 1):
-            # Get action from model (0, 1, or 2)
+            # Get action from model using evaluator's proxy
             action = get_model_message(client, step, obs, last_reward, history)
             
-            # Gymnasium v0.26+: step() returns (obs, reward, terminated, truncated, info)
+            # Execute action
             obs, reward, terminated, truncated, info = env.step(action)
             done = terminated or truncated
             
@@ -135,6 +156,8 @@ async def main():
         success = False
     finally:
         log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        # Ensure we close any open connections
+        await asyncio.sleep(0.1)
 
 if __name__ == "__main__":
     asyncio.run(main())
