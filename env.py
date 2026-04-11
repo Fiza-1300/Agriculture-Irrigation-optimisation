@@ -842,7 +842,7 @@ class IrrigationEnv(gym.Env):
         }
 
         return self.get_state(), reward, done, False, info
-
+    
     def _apply_fertilizer(self):
         """Apply fertilizer action"""
         prev_fertilizer = self.fertilizer_level
@@ -1143,6 +1143,20 @@ class IrrigationEnv(gym.Env):
             f"Drought: {self.in_drought} | "
             f"Fertilizer: {self.fertilizer_level:.2f}"
         )
+    
+    def state(self) -> dict:
+        """Return current state as dict for OpenEnv compliance"""
+        return {
+            "soil_moisture": float(self.soil_moisture),
+            "temperature": float(self.temperature),
+            "humidity": float(self.humidity),
+            "rain": float(self.rain),
+            "crop_stage": float(self.crop_stage),
+            "fertilizer_level": float(self.fertilizer_level),
+            "soil_health": float(self.soil_health),
+            "current_step": self.current_step,
+            "in_drought": self.in_drought
+        }
 
     def close(self):
         pass

@@ -245,17 +245,48 @@
 #     - gym>=0.21.0
 #     - numpy>=1.21.0
 
+# name: agriculture-irrigation
+# version: 0.1.0
+# description: Agricultural Irrigation Optimization Environment
+
+# environment:
+#   python: "3.10"
+#   dependencies:
+#     - pip
+#     - pip:
+#       - -r requirements.txt
+
+# tasks:
+#   - name: easy_soil_maintenance
+#     difficulty: easy
+#     grader: grader.EasyGrader
+    
+#   - name: medium_water_efficiency
+#     difficulty: medium
+#     grader: grader.MediumGrader
+    
+#   - name: hard_complete_harvest
+#     difficulty: hard
+#     grader: grader.HardGrader
+
+# entrypoints:
+#   inference:
+#     command: python inference.py
+#     type: script
+
 name: agriculture-irrigation
 version: 0.1.0
+description: Agricultural Irrigation Optimization Environment
+
 environment:
   python: "3.10"
   dependencies:
-    - uv
     - pip
     - pip:
       - -r requirements.txt
+
 entrypoints:
   server:
-    command: uvicorn inference:app --host 0.0.0.0 --port 7860
+    command: uvicorn app:app --host 0.0.0.0 --port 7860
     type: service
     port: 7860

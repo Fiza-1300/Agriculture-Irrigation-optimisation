@@ -1,4 +1,3 @@
-
 FROM python:3.10-slim
 
 WORKDIR /app
@@ -18,5 +17,5 @@ COPY . .
 # Expose the port HF Spaces uses
 EXPOSE 7860
 
-# Run the FastAPI app
+# Run the FastAPI app (for HF Space)
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
